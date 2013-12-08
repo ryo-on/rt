@@ -841,6 +841,10 @@ sub _FormatUser {
         my $self = shift;
         return ("System error"); #loc()
     },
+    SystemWarning => sub {
+        my $self = shift;
+        return ("System warning"); #loc()
+    },
     "Forward Transaction" => sub {
         my $self = shift;
         my $recipients = join ", ", map {
