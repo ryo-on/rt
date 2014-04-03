@@ -902,7 +902,8 @@ sub Limit {
                                   |(NOT\s*)?MATCHES
                                   |IS(\s*NOT)?
                                   |(NOT\s*)?IN
-                                  |\@\@)$/ix) {
+                                  |\@\@
+                                  |AGAINST)$/ix) {
         $RT::Logger->crit("Possible SQL injection attack: $ARGS{FIELD} $ARGS{OPERATOR}");
         %ARGS = (
             %ARGS,

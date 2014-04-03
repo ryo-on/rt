@@ -81,7 +81,17 @@ my %OPT = (
 my @OPT_LIST = qw(help|h! debug!);
 
 my $db_type = RT->Config->Get('DatabaseType');
-if ( $db_type eq 'Pg' ) {
+my $fts_config = RT->Config->Get('FullTextSearch') || {};
+if ($fts_config->{Sphinx}) {
+    %OPT = (
+        %OPT,
+        limit    => 0,
+        all      => 0,
+        xmlpipe2 => 0,
+    );
+    push @OPT_LIST, 'limit=i', 'all!', 'xmlpipe2!';
+    $db_type = 'sphinx';
+} elsif ( $db_type eq 'Pg' ) {
     %OPT = (
         %OPT,
         limit  => 0,
@@ -94,9 +104,8 @@ elsif ( $db_type eq 'mysql' ) {
         %OPT,
         limit    => 0,
         all      => 0,
-        xmlpipe2 => 0,
     );
-    push @OPT_LIST, 'limit=i', 'all!', 'xmlpipe2!';
+    push @OPT_LIST, 'limit=i', 'all!';
 }
 elsif ( $db_type eq 'Oracle' ) {
     %OPT = (
@@ -115,7 +124,6 @@ if ( $OPT{'help'} ) {
     );
 }
 
-my $fts_config = RT->Config->Get('FullTextSearch') || {};
 unless ( $fts_config->{'Enable'} ) {
     print STDERR <<EOT;
 
@@ -143,7 +151,7 @@ if ( $db_type eq 'Oracle' ) {
         $index, $OPT{'memory'}
     );
     exit;
-} elsif ( $db_type eq 'mysql' ) {
+} elsif ( $db_type eq 'sphinx' ) {
     unless ($OPT{'xmlpipe2'}) {
         print STDERR <<EOT;
 
@@ -266,7 +274,7 @@ sub clean {
 }
 
 {
-sub last_indexed_mysql {
+sub last_indexed_sphinx {
     my $type = shift;
     my $attr = $RT::System->FirstAttribute('LastIndexedAttachments');
     return 0 unless $attr;
@@ -274,7 +282,7 @@ sub last_indexed_mysql {
     return $attr->{ $type } || 0;
 }
 
-sub process_mysql {
+sub process_sphinx {
     my ($type, $attachment, $text) = (@_);
 
     my $doc = sphinx_template();
@@ -306,15 +314,31 @@ sub sphinx_template {
     return $doc;
 }
 
-sub finalize_mysql {
+sub finalize_sphinx {
     my ($type, $attachments) = @_;
     sphinx_template()->toFH(*STDOUT, 1);
 }
 
-sub clean_mysql {
+sub clean_sphinx {
     $doc = undef;
 }
+}
 
+sub last_indexed_mysql { last_indexed_pg(@_); }
+sub process_mysql {
+    my ($type, $attachment, $text) = (@_);
+
+    my $dbh = $RT::Handle->dbh;
+    my $table = $fts_config->{'Table'};
+
+    my $query;
+    if ( my ($id) = $dbh->selectrow_array("SELECT id FROM $table WHERE id = ?", undef, $attachment->id) ) {
+        $query = "UPDATE $table SET Content = ? WHERE id = ?";
+    } else {
+        $query = "INSERT INTO $table(Content, id) VALUES(?, ?)";
+    }
+
+    $dbh->do( $query, undef, $$text, $attachment->id );
 }
 
 sub last_indexed_pg {
