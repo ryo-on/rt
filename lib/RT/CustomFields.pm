@@ -128,24 +128,24 @@ sub LimitToGrouping {
         unless ( $list and ref($list) eq 'ARRAY' and @$list ) {
             return $self->Limit( FIELD => 'id', VALUE => 0, ENTRYAGGREGATOR => 'AND' );
         }
-        foreach ( @$list ) {
-            $self->Limit( FIELD => 'Name', VALUE => $_, CASESENSITIVE => 0 );
-        }
+        $self->Limit(
+            FIELD         => 'Name',
+            OPERATOR      => 'IN',
+            VALUE         => $list,
+            CASESENSITIVE => 0,
+        );
     } else {
         my @list = map {@$_} grep defined && ref($_) eq 'ARRAY',
             values %h;
 
         return unless @list;
-        foreach ( @list ) {
-            $self->Limit(
-                FIELD => 'Name',
-                OPERATOR => '!=',
-                VALUE => $_,
-                ENTRYAGGREGATOR => 'AND',
-                CASESENSITIVE => 0,
-            );
-        }
 
+        $self->Limit(
+            FIELD         => 'Name',
+            OPERATOR      => 'NOT IN',
+            VALUE         => [ @list ],
+            CASESENSITIVE => 0,
+        );
     }
     return;
 }

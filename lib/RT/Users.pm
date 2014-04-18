@@ -560,14 +560,13 @@ sub WhoBelongToGroups {
 
     my $group_members = $self->_JoinGroupMembers( %args );
 
-    foreach my $groupid (@{$args{'Groups'}}) {
-        $self->Limit( ALIAS           => $group_members,
-                      FIELD           => 'GroupId',
-                      VALUE           => $groupid,
-                      QUOTEVALUE      => 0,
-                      ENTRYAGGREGATOR => 'OR',
-                    );
-    }
+    $self->Limit(
+        ALIAS      => $group_members,
+        FIELD      => 'GroupId',
+        OPERATOR   => 'IN',
+        VALUE      => $args{'Groups'},
+        QUOTEVALUE => 0,
+    );
 }
 
 =head2 SimpleSearch
@@ -635,9 +634,8 @@ sub SimpleSearch {
     }
 
     # Exclude users we don't want
-    foreach (@{$args{Exclude}}) {
-        $self->Limit(FIELD => 'id', VALUE => $_, OPERATOR => '!=', ENTRYAGGREGATOR => 'AND');
-    }
+    $self->Limit(FIELD => 'id', OPERATOR => 'NOT IN', VALUE => $args{Exclude} )
+        if @{$args{Exclude}};
 
     if ( RT->Config->Get('DatabaseType') eq 'Oracle' ) {
         $self->Limit(
