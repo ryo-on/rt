@@ -292,8 +292,10 @@ sub get_template {
 sub load_module {
     my $modname = shift;
     eval "require $modname";
-    if ($@) {
-        die loc( "Failed to load module [_1]. ([_2])", $modname, $@ );
+    my $err = $@;
+    if ($err) {
+        chomp $err;
+        die loc( "Failed to load module [_1]. ([_2])", $modname, $err );
     }
 
 }
