@@ -1398,6 +1398,7 @@ sub UpdateCustomFields {
         $args = \%args;
     }
 
+    my %cf_added;
     foreach my $arg ( keys %$args ) {
         next
           unless ( $arg =~
@@ -1407,6 +1408,7 @@ sub UpdateCustomFields {
         my $values = $args->{$arg};
         my $cf = $self->LoadCustomFieldByIdentifier($cfid);
         next unless $cf->ObjectTypeFromLookupType->isa(ref $self);
+        $cf_added{$cfid}++;
         foreach
           my $value ( UNIVERSAL::isa( $values, 'ARRAY' ) ? @$values : $values )
         {
@@ -1416,6 +1418,25 @@ sub UpdateCustomFields {
             );
             $self->_AddCustomFieldValue(
                 Field             => $cfid,
+                Value             => $value,
+                RecordTransaction => 0,
+            );
+        }
+    }
+
+    my $cfs = $self->Object->TransactionCustomFields;
+    while ( my $cf = $cfs->Next ) {
+        next if $cf_added{$cf->id} || !$cf->SupportDefaultValues;
+        my ( $on ) = grep { $_->isa( $cf->RecordClassFromLookupType ) } $cf->ACLEquivalenceObjects;
+        my $values = $cf->DefaultValues( Object => $on || RT->System );
+        foreach my $value ( UNIVERSAL::isa( $values => 'ARRAY' ) ? @$values : $values ) {
+            next if $self->CustomFieldValueIsEmpty(
+                Field => $cf->id,
+                Value => $value,
+            );
+
+            $self->_AddCustomFieldValue(
+                Field             => $cf->id,
                 Value             => $value,
                 RecordTransaction => 0,
             );
