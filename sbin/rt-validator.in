@@ -938,13 +938,16 @@ push @CHECKS, 'Links: wrong organization' => sub {
         my $scheme = $rt_uri->Scheme;
         my $prefix = $rt_uri->LocalURIPrefix;
 
+        my $esc_scheme = $scheme; $esc_scheme =~ s/([%_])/\\$1/g;
+        my $esc_prefix = $prefix; $esc_prefix =~ s/([%_])/\\$1/g;
+
         foreach my $use ( @URI_USES ) {
             my $table = m2t( $use->{'model'} );
             my $column = $use->{'column'};
 
             my $query = "SELECT id, $column FROM $table WHERE"
               . " $column LIKE ? AND $column NOT LIKE ?";
-            my @binds = ($scheme ."://%", $prefix ."%");
+            my @binds = ($esc_scheme ."://%", $esc_prefix ."%");
 
             while ( my ($k, $v) = each %{ $use->{'Additional'} || {} } ) {
                 $query .= " AND $k = ?";
@@ -967,9 +970,10 @@ push @CHECKS, 'Links: wrong organization' => sub {
 
                 print "Updating record(s) in $table\n" if $opt{'verbose'};
                 my $wrong_prefix = $scheme . '://'. $wrong_org;
+                my $esc_wrong_prefix = $wrong_prefix; $esc_wrong_prefix =~ s/([%_])/\\$1/g;
                 my $query = "UPDATE $table SET $column = ". sql_concat('?', "SUBSTR($column, ?)")
                   ." WHERE $column LIKE ?";
-                execute_query( $query, $prefix, length($wrong_prefix)+1, $wrong_prefix .'/%' );
+                execute_query( $query, $prefix, length($wrong_prefix)+1, $esc_wrong_prefix .'/%' );
 
                 $redo_check{'Links: wrong organization'} = 1;
                 $redo_check{'Links: LocalX for non-ticket'} = 1;
@@ -985,13 +989,14 @@ push @CHECKS, 'Links: LocalX for non-ticket' => sub {
     my $rt_uri = RT::URI::fsck_com_rt->new( $RT::SystemUser );
     my $scheme = $rt_uri->Scheme;
     my $prefix = $rt_uri->LocalURIPrefix;
+    my $esc_prefix = $prefix; $esc_prefix =~ s/([%_])/\\$1/g;
     my $table = m2t('Link');
 
     foreach my $dir ( 'Target', 'Base' ) {
         # we look only at links with correct organization, previouse check deals
         # with incorrect orgs
         my $where = "Local$dir > 0 AND $dir LIKE ? AND $dir NOT LIKE ?";
-        my @binds = ($prefix ."/%", $prefix ."/ticket/%");
+        my @binds = ($esc_prefix ."/%", $esc_prefix ."/ticket/%");
 
         my $sth = execute_query( "SELECT id FROM $table WHERE $where", @binds );
         while ( my ($id, $value) = $sth->fetchrow_array ) {
@@ -1018,6 +1023,7 @@ push @CHECKS, 'Links: LocalX != X' => sub {
     my $rt_uri = RT::URI::fsck_com_rt->new( $RT::SystemUser );
     my $scheme = $rt_uri->Scheme;
     my $prefix = $rt_uri->LocalURIPrefix .'/ticket/';
+    my $esc_prefix = $prefix; $esc_prefix =~ s/([%_])/\\$1/g;
     my $table = m2t('Link');
 
     foreach my $dir ( 'Target', 'Base' ) {
@@ -1027,7 +1033,7 @@ push @CHECKS, 'Links: LocalX != X' => sub {
         # XXX: we have issue with MergedInto links - "LocalX !~ X"
         my $where = "Local$dir > 0 AND $dir LIKE ? AND $dir != ". sql_concat('?', "Local$dir")
             ." AND Type != ?";
-        my @binds = ($prefix ."%", $prefix, 'MergedInto');
+        my @binds = ($esc_prefix ."%", $prefix, 'MergedInto');
 
         my $sth = execute_query( "SELECT id FROM $table WHERE $where", @binds );
         while ( my ($id, $value) = $sth->fetchrow_array ) {
@@ -1067,6 +1073,9 @@ push @CHECKS, 'Links: missing object' => sub {
         my $scheme = $rt_uri->Scheme;
         my $prefix = $rt_uri->LocalURIPrefix;
 
+        my $esc_scheme = $scheme; $esc_scheme =~ s/([%_])/\\$1/g;
+        my $esc_prefix = $prefix; $esc_prefix =~ s/([%_])/\\$1/g;
+
         foreach my $use ( @URI_USES ) {
             my $stable = m2t( $use->{'model'} );
             my $scolumn = $use->{'column'};
@@ -1078,11 +1087,12 @@ push @CHECKS, 'Links: missing object' => sub {
                 my $tprefix = $prefix .'/'. ($tclass eq 'RT::Ticket'? 'ticket' : $tclass) .'/';
 
                 $tprefix = $prefix . '/article/' if $tclass eq 'RT::Article';
+                my $esc_tprefix = $tprefix; $esc_tprefix =~ s/([%_])/\\$1/g;
 
                 my $query = "SELECT s.id FROM $stable s LEFT JOIN $ttable t "
                   ." ON t.id = ". sql_str2int("SUBSTR(s.$scolumn, ?)")
                     ." WHERE s.$scolumn LIKE ? AND t.id IS NULL";
-                my @binds = (length($tprefix) + 1, $tprefix.'%');
+                my @binds = (length($tprefix) + 1, $esc_tprefix.'%');
 
                 while ( my ($k, $v) = each %{ $use->{'Additional'} || {} } ) {
                     $query .= " AND s.$k = ?";
