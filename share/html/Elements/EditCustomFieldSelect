@@ -104,10 +104,12 @@ jQuery(  function () {
 <fieldset class="cfedit">
 <div data-name="<%$name%>" id="<%$name%>">
 %   if ( $checktype eq 'radio' ) {
+% if ( $CustomField->MatchPattern('') ) {
   <div class="none">
   <input class="none" type="<% $checktype %>" name="<% $name %>" id="<% $name %>-none" value="" <% keys %default ? '' : ' checked="checked"' |n%> />
   <label for="<% $name %>-none"><&|/l&>(no value)</&></label><br />
   </div>
+% }
 %   }
 %   my $CFVs = $CustomField->Values;
 %   while ( my $value = $CFVs->Next ) {
@@ -125,7 +127,9 @@ jQuery(  function () {
 %# this hidden select is to supply a full list of values,
 %# see filter_cascade_select() in js/cascaded.js
       <select name="<%$name%>-Complete" id="<%$name%>-Complete" class="hidden" disabled="disabled">
+% if ( $CustomField->MatchPattern('') ) {
         <option value=""<% !$selected && qq[ selected="selected"] |n %>><&|/l&>(no value)</&></option>
+% }
 %       $m->out($out);
       </select>
 % }
@@ -135,7 +139,9 @@ jQuery(  function () {
   size="<% $Rows %>"
 % }
 <% $Multiple && qq[multiple="multiple"] |n %> >
+% if ( $CustomField->MatchPattern('') ) {
 <option value=""<% !$selected && qq[ selected="selected"] |n %>><&|/l&>(no value)</&></option>
+% }
 % $m->out($out);
 </select>
 % }
