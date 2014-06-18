@@ -726,6 +726,9 @@ Using formatters other than C<core> requires that the
 L<HTML::FormatExternal> module be installed; it is an optional
 dependency which RT will not install by default.
 
+If the chosen formatter is not in the webserver's $PATH, you may set
+this option the full path to one of the aforementioned executables.
+
 =cut
 
 Set($HTMLFormatter, undef);
