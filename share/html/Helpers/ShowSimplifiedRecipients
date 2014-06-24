@@ -45,14 +45,23 @@
 %# those contributions and any derivatives thereof.
 %#
 %# END BPS TAGGED BLOCK }}}
-<%args>
-$TicketObj
-</%args>
 <%init>
 return unless RT->Config->Get('SimplifiedRecipients', $session{'CurrentUser'});
 
-my $Object = $m->notes("DryRun-".$TicketObj->Id) || $TicketObj->DryRun(%ARGS);
-$m->notes("DryRun-".$TicketObj->Id, $Object);
+my $TicketObj = RT::Ticket->new($session{CurrentUser});
+$TicketObj->Load($ARGS{id});
+return unless $TicketObj->id && $ARGS{UpdateType};
+
+if ( $ARGS{UpdateType} eq 'private' ) {
+    return
+      unless $TicketObj->CurrentUserHasRight( 'CommentOnTicket' ) || $TicketObj->CurrentUserHasRight( 'ModifyTicket' );
+}
+else {
+    return
+      unless $TicketObj->CurrentUserHasRight( 'ReplyToTicket' ) || $TicketObj->CurrentUserHasRight( 'ModifyTicket' );
+}
+
+my $Object = $TicketObj->DryRun(%ARGS);
 return unless $Object;
 
 my %headers = (To => {}, Cc => {}, Bcc => {});
@@ -75,7 +84,6 @@ if ($Object->Rules) {
 my %recips;
 my %squelched = ProcessTransactionSquelching( \%ARGS );
 </%init>
-<&|/Widgets/TitleBox, title => loc('Recipients'), id => 'recipients' &>
 <table>
 % for my $type (qw(To Cc Bcc)) {
 %     next unless keys %{$headers{$type}};
@@ -99,5 +107,8 @@ my %squelched = ProcessTransactionSquelching( \%ARGS );
 <&|/l, RT->Config->Get('WebPath')."/Ticket/ModifyPeople.html?id=".$TicketObj->Id,
 &>Uncheck boxes to disable notifications to the listed recipients <b>for this transaction only</b>; persistent squelching is managed on the <a href="[_1]">People page</a>.</&>
 </p>
-</&>
-% $m->notes("DryRun-Recipients-".$TicketObj->Id, \%recips);
+
+% unless ($TicketObj->CurrentUserHasRight('ShowOutgoingEmail')) {
+    <input type="hidden" name="TxnRecipients" value="<% join ",",sort keys %recips %>" />
+% }
+% $m->abort();
