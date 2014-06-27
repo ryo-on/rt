@@ -15,6 +15,9 @@
 #   perl -c /path/to/your/etc/RT_SiteConfig.pm
 #
 # You must restart your webserver after making changes to this file.
+#
+# If you have a lot to config here, you can also separate them into
+# different files in RT_SiteConfig.d
 
 Set( $rtname, 'example.com');
 
