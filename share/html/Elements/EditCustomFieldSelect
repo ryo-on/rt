@@ -112,13 +112,15 @@ jQuery(  function () {
 % }
 %   }
 %   my $CFVs = $CustomField->Values;
+%   my $is_first = 1;
 %   while ( my $value = $CFVs->Next ) {
 %     my $content = $value->Name;
 %     my $labelid = "$name-". $value->id;
 <div data-name="<% $value->Category || '' %>">
-  <input type="<% $checktype %>" name="<% $name %>" id="<% $labelid %>" value="<% $content %>" <% $default{ lc $content }? ' checked="checked"' : '' |n%> />
+  <input type="<% $checktype %>" name="<% $name %>" id="<% $labelid %>" value="<% $content %>" <% ($is_first && !keys %default && !$CustomField->MatchPattern('')) || $default{ lc $content } ? ' checked="checked"' : '' |n%> />
   <label for="<% $labelid %>"><% $content %></label><br />
 </div>
+%     $is_first = 0 if $is_first;
 %   }
 </div>
 </fieldset>
@@ -191,6 +193,7 @@ $MaxValues => 1
 % my $selected;
 % my $CFVs = $CustomField->Values;
 % my @levels;
+% my $is_first = 1;
 % while ( my $value = $CFVs->Next ) {
 %       my $name = $value->Name;
 %       my $category = $value->Category || '';
@@ -212,12 +215,12 @@ $MaxValues => 1
 %           push @levels, $level;
 %       }
         <option value="<% $name %>"
-%       if ( grep $_ eq lc $name, @Default )
-%       {
+%       if ( ($is_first && !@Default && !$CustomField->MatchPattern('')) || ( grep $_ eq lc $name, @Default ) ) {
 %           $$SelectedRef = 1;
             selected="selected"
 %       }
         ><% $name %></option>
+%       $is_first = 0 if $is_first;
 % }
 % for (@levels) {
             </optgroup>
