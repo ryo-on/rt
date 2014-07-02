@@ -125,6 +125,7 @@ $values->Limit(
     SUBCLAUSE       => 'autocomplete',
     CASESENSITIVE   => 0,
 );
+$values->RowsPerPage( $ARGS{max} // 10 );
 
 my @suggestions;
 
